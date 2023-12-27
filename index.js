@@ -39,7 +39,13 @@ const init = ()=>{
         const lastCharMes = chat.toReversed().find(it=>!it.is_user && !it.is_system && nameList.find(o=>it.name == o));
         const img = imgs.find(it=>it.getAttribute('data-character') == lastCharMes?.name);
         if (img && document.querySelector('#expression-image').src) {
-            img.querySelector('.stge--img').src = document.querySelector('#expression-image').src;
+            const src = document.querySelector('#expression-image').src;
+            const parts = src.split('/');
+            const name = parts[parts.indexOf('characters')+1];
+            const img = imgs.find(it=>it.getAttribute('data-character') == name)?.querySelector('.stge--img');
+            if (img) {
+                img.src = src;
+            }
         }
     });
 };

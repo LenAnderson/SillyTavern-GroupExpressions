@@ -123,13 +123,13 @@ const initSettings = () => {
                 <div class="flex-container">
                     <label>
                         Number of characters on the left (-1 = unlimited)
-                        <input type="number" class="text_pole" min="0" id="stge--numLeft" value="${settings.numLeft}">
+                        <input type="number" class="text_pole" min="-1" id="stge--numLeft" value="${settings.numLeft}">
                     </label>
                 </div>
                 <div class="flex-container">
                     <label>
                         Number of characters on the right (-1 = unlimited)
-                        <input type="number" class="text_pole" min="0" id="stge--numRight" value="${settings.numRight}">
+                        <input type="number" class="text_pole" min="-1" id="stge--numRight" value="${settings.numRight}">
                     </label>
                 </div>
                 <div class="flex-container">

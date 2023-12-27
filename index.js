@@ -106,7 +106,7 @@ const initSettings = () => {
                 <div class="flex-container">
                     <label>
                         Scale dropoff (percentage; 0 = no change; >0 = chars to the side get smaller; >0 = chars to the side get larger)
-                        <input type="number" class="text_pole" min="0" id="stge--scaleDropoff" value="${settings.scaleDropoff}">
+                        <input type="number" class="text_pole" id="stge--scaleDropoff" value="${settings.scaleDropoff}">
                     </label>
                 </div>
                 <div class="flex-container">

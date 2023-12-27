@@ -180,35 +180,35 @@ const initSettings = () => {
         saveSettingsDebounced();
         // updateSettingsBackground();
     });
-    document.querySelector('#stge--numLeft').addEventListener('change', ()=>{
+    document.querySelector('#stge--numLeft').addEventListener('input', ()=>{
         settings.numLeft = Number(document.querySelector('#stge--numLeft').value);
         saveSettingsDebounced();
         // restart();
     });
-    document.querySelector('#stge--numRight').addEventListener('change', ()=>{
+    document.querySelector('#stge--numRight').addEventListener('input', ()=>{
         settings.numRight = Number(document.querySelector('#stge--numRight').value);
         saveSettingsDebounced();
         // restart();
     });
-    document.querySelector('#stge--scaleSpeaker').addEventListener('change', ()=>{
+    document.querySelector('#stge--scaleSpeaker').addEventListener('input', ()=>{
         settings.scaleSpeaker = Number(document.querySelector('#stge--scaleSpeaker').value);
         saveSettingsDebounced();
         root.style.setProperty('--scale-speaker', String(settings.scaleSpeaker));
         // restart();
     });
-    document.querySelector('#stge--offset').addEventListener('change', ()=>{
+    document.querySelector('#stge--offset').addEventListener('input', ()=>{
         settings.offset = Number(document.querySelector('#stge--offset').value);
         saveSettingsDebounced();
         root.style.setProperty('--offset', String(settings.offset));
         // restart();
     });
-    document.querySelector('#stge--scaleDropoff').addEventListener('change', ()=>{
+    document.querySelector('#stge--scaleDropoff').addEventListener('input', ()=>{
         settings.scaleDropoff = Number(document.querySelector('#stge--scaleDropoff').value);
         saveSettingsDebounced();
         root.style.setProperty('--scale-dropoff', String(settings.scaleDropoff));
         // restart();
     });
-    document.querySelector('#stge--transition').addEventListener('change', ()=>{
+    document.querySelector('#stge--transition').addEventListener('input', ()=>{
         settings.transition = Number(document.querySelector('#stge--transition').value);
         saveSettingsDebounced();
         root.style.setProperty('--transition', String(settings.transition));

@@ -1,9 +1,34 @@
 import { chat, eventSource, event_types, saveSettingsDebounced } from '../../../../script.js';
 import { extension_settings, getContext } from '../../../extensions.js';
-import { debounce, delay } from '../../../utils.js';
-import { debounceAsync } from '../../quick-reply/index.js';
+import { delay } from '../../../utils.js';
 
 const log = (...msg) => console.log('[GE]', ...msg);
+/**
+ * Creates a debounced function that delays invoking func until after wait milliseconds have elapsed since the last time the debounced function was invoked.
+ * @param {Function} func The function to debounce.
+ * @param {Number} [timeout=300] The timeout in milliseconds.
+ * @returns {Function} The debounced function.
+ */
+export function debounceAsync(func, timeout = 300) {
+    let timer;
+    /**@type {Promise}*/
+    let debouncePromise;
+    /**@type {Function}*/
+    let debounceResolver;
+    return (...args) => {
+        clearTimeout(timer);
+        if (!debouncePromise) {
+            debouncePromise = new Promise(resolve => {
+                debounceResolver = resolve;
+            });
+        }
+        timer = setTimeout(() => {
+            debounceResolver(func.apply(this, args));
+            debouncePromise = null;
+        }, timeout);
+        return debouncePromise;
+    };
+}
 
 
 

@@ -31,10 +31,6 @@ let busy = false;
 /**@type {MutationObserver} */
 let mo;
 const init = ()=>{
-    root = document.createElement('div'); {
-        root.classList.add('stge--root');
-        document.body.append(root);
-    }
     mo = new MutationObserver(muts=>{
         if (busy) return;
         const lastCharMes = chat.toReversed().find(it=>!it.is_user && !it.is_system && nameList.find(o=>it.name == o));
@@ -66,7 +62,7 @@ const messageRendered = async () => {
     while (groupId) {
         if (!busy) {
             await updateMembers();
-            const lastMes = chat.toReversed().find(it=>!it.is_system && nameList.find(o=>it.name == o));
+            const lastMes = chat.toReversed().find(it=>!it.is_system);
             const lastCharMes = chat.toReversed().find(it=>!it.is_user && !it.is_system && nameList.find(o=>it.name == o));
             if (lastCharMes) {
                 if (lastCharMes.name != current) {
@@ -139,7 +135,7 @@ const updateMembers = async()=>{
         }
         img.closest('.stge--wrapper').classList.add('stge--exit');
         await delay(550);
-        img.remove();
+        img.closest('.stge--wrapper').remove();
     }
     for (const name of added) {
         let dir = 0;
@@ -195,6 +191,10 @@ const getOrder = (members)=>{
     return o;
 };
 const start = ()=>{
+    root = document.createElement('div'); {
+        root.classList.add('stge--root');
+        document.body.append(root);
+    }
     const context = getContext();
     groupId = context.groupId;
     chatId = context.chatid;
@@ -237,8 +237,10 @@ const end = ()=>{
     nameList = [];
     left = [];
     right = [];
+    root?.remove();
+    root = null;
     while (imgs.length > 0) {
-        imgs.pop().closest('.stge--wrapper').remove();
+        imgs.pop();
     }
     document.querySelector('#expression-wrapper').style.opacity = '';
 };

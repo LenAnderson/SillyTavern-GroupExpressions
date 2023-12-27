@@ -13,6 +13,7 @@
   width: calc((100vw - var(--sheldWidth)) / 2);
   perspective: 500px;
   transform-style: preserve-3d;
+  transition: calc(var(--transition) * 1ms);
 }
 .stge--root > .stge--wrapper {
   --order: 0;

@@ -59,6 +59,7 @@ let busy = false;
 /**@type {MutationObserver} */
 let mo;
 const init = ()=>{
+    log('init');
     initSettings();
     mo = new MutationObserver(muts=>{
         if (busy) return;
@@ -77,7 +78,15 @@ const init = ()=>{
 };
 eventSource.on(event_types.APP_READY, ()=>init());
 
+const updateSettingsBackground = ()=>{
+    if (document.querySelector('.stge--settings .inline-drawer-content').getBoundingClientRect().height > 0 && settings.transparentMenu) {
+        document.querySelector('#rm_extensions_block').style.background = 'rgba(0 0 0 / 0.5)';
+    } else {
+        document.querySelector('#rm_extensions_block').style.background = '';
+    }
+};
 const initSettings = () => {
+    log('initSettings');
     settings = Object.assign({
         isEnabled: true,
         numLeft: -1,
@@ -87,6 +96,7 @@ const initSettings = () => {
         transition: 400,
         expression: 'joy',
         scaleDropoff: 3,
+        transparentMenu: false,
     }, extension_settings.groupExpressions ?? {});
     extension_settings.groupExpressions = settings;
 
@@ -102,6 +112,12 @@ const initSettings = () => {
                     <label class="checkbox_label">
                         <input type="checkbox" id="stge--isEnabled" ${settings.isEnabled ? 'checked' : ''}>
                         Enable group expressions
+                    </label>
+                </div>
+                <div class="flex-container">
+                    <label class="checkbox_label">
+                        <input type="checkbox" id="stge--transparentMenu" ${settings.transparentMenu ? 'checked' : ''}>
+                        Transparent settings menu
                     </label>
                 </div>
                 <div class="flex-container">
@@ -151,40 +167,52 @@ const initSettings = () => {
     </div>
 `;
     $('#extensions_settings').append(html);
+    window.addEventListener('click', ()=>{
+        updateSettingsBackground();
+    });
     document.querySelector('#stge--isEnabled').addEventListener('click', ()=>{
         settings.isEnabled = document.querySelector('#stge--isEnabled').checked;
         saveSettingsDebounced();
         restart();
     });
+    document.querySelector('#stge--transparentMenu').addEventListener('click', ()=>{
+        settings.transparentMenu = document.querySelector('#stge--transparentMenu').checked;
+        saveSettingsDebounced();
+        // updateSettingsBackground();
+    });
     document.querySelector('#stge--numLeft').addEventListener('change', ()=>{
         settings.numLeft = Number(document.querySelector('#stge--numLeft').value);
         saveSettingsDebounced();
-        restart();
+        // restart();
     });
     document.querySelector('#stge--numRight').addEventListener('change', ()=>{
         settings.numRight = Number(document.querySelector('#stge--numRight').value);
         saveSettingsDebounced();
-        restart();
+        // restart();
     });
     document.querySelector('#stge--scaleSpeaker').addEventListener('change', ()=>{
         settings.scaleSpeaker = Number(document.querySelector('#stge--scaleSpeaker').value);
         saveSettingsDebounced();
-        restart();
+        root.style.setProperty('--scale-speaker', String(settings.scaleSpeaker));
+        // restart();
     });
     document.querySelector('#stge--offset').addEventListener('change', ()=>{
         settings.offset = Number(document.querySelector('#stge--offset').value);
         saveSettingsDebounced();
-        restart();
+        root.style.setProperty('--offset', String(settings.offset));
+        // restart();
     });
     document.querySelector('#stge--scaleDropoff').addEventListener('change', ()=>{
         settings.scaleDropoff = Number(document.querySelector('#stge--scaleDropoff').value);
         saveSettingsDebounced();
-        restart();
+        root.style.setProperty('--scale-dropoff', String(settings.scaleDropoff));
+        // restart();
     });
     document.querySelector('#stge--transition').addEventListener('change', ()=>{
         settings.transition = Number(document.querySelector('#stge--transition').value);
         saveSettingsDebounced();
-        restart();
+        root.style.setProperty('--transition', String(settings.transition));
+        // restart();
     });
     const sel = document.querySelector('#stge--expression');
     const exp = [
@@ -228,11 +256,12 @@ const initSettings = () => {
     sel.addEventListener('change', ()=>{
         settings.expression = sel.value;
         saveSettingsDebounced();
-        restart();
+        // restart();
     });
 };
 
 const chatChanged = async ()=>{
+    log('chatChanged');
     const context = getContext();
     if (context.groupId) {
         await restart();
@@ -248,8 +277,10 @@ const groupUpdated = (...args) => {
 eventSource.on(event_types.GROUP_UPDATED, (...args)=>groupUpdated(...args));
 
 const messageRendered = async () => {
+    log('messageRendered');
     while (settings.isEnabled && groupId) {
         if (!busy) {
+            updateSettingsBackground();
             await updateMembers();
             //await delay(500); continue;
             const lastMes = chat.toReversed().find(it=>!it.is_system);
@@ -364,39 +395,59 @@ const updateMembers = async()=>{
         await delay(settings.transition + 150);
         img.remove();
     }
+    const purgatory = [];
+    while (settings.numLeft != -1 && left.length > settings.numLeft) {
+        purgatory.push(left.pop());
+    }
+    while (settings.numRight != -1 && right.length > settings.numRight) {
+        purgatory.push(right.pop());
+    }
     for (const name of added) {
-        let dir = 1;
-        let order = 0;
         nameList.push(name);
         if (!current) {
             current = name;
         } else if ((left.length < settings.numLeft || settings.numLeft == -1) && (left.length <= right.length || right.length >= settings.numRight)) {
             left.push(name);
-            dir = -1;
-            order = left.length;
         } else if (right.length < settings.numRight || settings.numRight == -1) {
             right.push(name);
-            dir = 1;
-            order = right.length;
         }
         const wrap = document.createElement('div'); {
             imgs.push(wrap);
             wrap.classList.add('stge--wrapper');
             wrap.setAttribute('data-character', name);
-            // wrap.classList.add('stge--exit');
-            // if (dir != 0) {
-            // }
-            // wrap.style.setProperty('--dir', dir);
-            // wrap.style.setProperty('--order', order);
             const img = document.createElement('img'); {
                 img.classList.add('stge--img');
                 img.src = `/characters/${name}/${settings.expression}.png`;
                 wrap.append(img);
             }
-            // root.append(wrap);
         }
-        // await delay(50);
-        // wrap.classList.remove('stge--exit');
+    }
+    for (const name of purgatory) {
+        if (!current) {
+            current = name;
+        } else if ((left.length < settings.numLeft || settings.numLeft == -1) && (left.length <= right.length || right.length >= settings.numRight)) {
+            left.push(name);
+        } else if (right.length < settings.numRight || settings.numRight == -1) {
+            right.push(name);
+        } else {
+            const wrap = imgs.find(it=>it.getAttribute('data-character') == name);
+            if (wrap) {
+                wrap.classList.add('stge--exit');
+                await delay(settings.transition + 150);
+                wrap.remove();
+            }
+        }
+    }
+    const queue = nameList.filter(it=>left.indexOf(it)==-1 && right.indexOf(it) == -1 && it != current);
+    while (queue.length > 0 && (settings.numLeft == -1 || settings.numRight == -1 || left.length < settings.numLeft || right.length < settings.numRight || !current)) {
+        const name = queue.pop();
+        if (!current) {
+            current = name;
+        } else if ((left.length < settings.numLeft || settings.numLeft == -1) && (left.length <= right.length || right.length >= settings.numRight)) {
+            left.push(name);
+        } else if (right.length < settings.numRight || settings.numRight == -1) {
+            right.push(name);
+        }
     }
     busy = false;
 };
@@ -419,13 +470,19 @@ const getOrder = (members)=>{
     }
     return o;
 };
+let restarting = false;
 const restart = debounceAsync(async()=>{
+    if (restarting) return;
+    restarting = true;
+    log('restart');
     end();
-    await delay(500);
+    await delay(Math.max(550, settings.transition + 150));
     await start();
+    restarting = false;
 });
 const start = async()=>{
     if (!settings.isEnabled) return;
+    log('start');
     document.querySelector('#expression-wrapper').style.opacity = '0';
     root = document.createElement('div'); {
         root.classList.add('stge--root');
@@ -443,6 +500,7 @@ const start = async()=>{
     document.querySelector('#expression-wrapper').style.opacity = '0';
 };
 const end = ()=>{
+    log('end');
     mo.disconnect();
     groupId = null;
     chatId = null;
@@ -456,4 +514,5 @@ const end = ()=>{
         imgs.pop();
     }
     document.querySelector('#expression-wrapper').style.opacity = '';
+    log('/end');
 };

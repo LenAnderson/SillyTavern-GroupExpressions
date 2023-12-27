@@ -240,4 +240,5 @@ const end = ()=>{
     while (imgs.length > 0) {
         imgs.pop().closest('.stge--wrapper').remove();
     }
+    document.querySelector('#expression-wrapper').style.opacity = '';
 };

@@ -1,6 +1,12 @@
 .stge--root {
+	--scale-speaker: 120;
+	--top: calc(100 - 100 / var(--scale-speaker) * 100);
+	--offset: 25;
+	--transition: 400;
+}
+.stge--root {
 	position: absolute;
-	top: 20%;
+	top: calc(var(--top) * 1%);
 	bottom: 0;
 	right: 0;
 	width: calc((100vw - var(--sheldWidth)) / 2);
@@ -9,20 +15,20 @@
 
 	> .stge--wrapper {
 		--order: 0;
-		--dir: 0;
+		--dir: 1;
 		position: absolute;
 		top: 0;
-		left: calc(25% * var(--dir) * var(--order));
+		left: calc(var(--offset) * 1% * var(--dir) * var(--order));
 		width: 100%;
 		bottom: 0;
 		transform: translate3d(0, 0, calc(-1px * var(--order)));
 		transform-origin: bottom center;
-		transition: 400ms, transform 1ms;
+		transition: calc(var(--transition) * 1ms), transform 1ms;
 		&.stge--exit {
 			left: calc(100vw * var(--dir));
 		}
 		&.stge--last {
-			scale: 1.2;
+			scale: calc(var(--scale-speaker) * 1%);
 		}
 		> .stge--img {
 			height: 100%;

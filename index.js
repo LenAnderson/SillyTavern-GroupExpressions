@@ -1,5 +1,5 @@
-import { chat, eventSource, event_types } from '../../../../script.js';
-import { getContext } from '../../../extensions.js';
+import { chat, eventSource, event_types, saveSettingsDebounced } from '../../../../script.js';
+import { extension_settings, getContext } from '../../../extensions.js';
 import { delay } from '../../../utils.js';
 
 const log = (...msg) => console.log('[GE]', ...msg);
@@ -7,13 +7,15 @@ const log = (...msg) => console.log('[GE]', ...msg);
 
 
 
+/**@type {Object} */
+let settings;
 /**@type {String} */
 let groupId;
 /**@type {String} */
 let chatId;
 /**@type {HTMLElement} */
 let root;
-/**@type {HTMLImageElement[]} */
+/**@type {HTMLElement[]} */
 let imgs = [];
 /**@type {String[]} */
 let nameList = [];
@@ -31,22 +33,165 @@ let busy = false;
 /**@type {MutationObserver} */
 let mo;
 const init = ()=>{
+    initSettings();
     mo = new MutationObserver(muts=>{
         if (busy) return;
         const lastCharMes = chat.toReversed().find(it=>!it.is_user && !it.is_system && nameList.find(o=>it.name == o));
         const img = imgs.find(it=>it.getAttribute('data-character') == lastCharMes?.name);
         if (img && document.querySelector('#expression-image').src) {
-            img.src = document.querySelector('#expression-image').src;
+            img.querySelector('.stge--img').src = document.querySelector('#expression-image').src;
         }
     });
 };
 eventSource.on(event_types.APP_READY, ()=>init());
 
-const chatChanged = ()=>{
+const initSettings = () => {
+    settings = Object.assign({
+        isEnabled: true,
+        numLeft: -1,
+        numRight: 2,
+        scaleSpeaker: 120,
+        offset: 25,
+        transition: 400,
+        expression: 'joy',
+    }, extension_settings.groupExpressions ?? {});
+    extension_settings.groupExpressions = settings;
+
+    const html = `
+    <div class="stge--settings">
+        <div class="inline-drawer">
+            <div class="inline-drawer-toggle inline-drawer-header">
+                <b>Group Expressions</b>
+                <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
+            </div>
+            <div class="inline-drawer-content" style="font-size:small;">
+                <div class="flex-container">
+                    <label class="checkbox_label">
+                        <input type="checkbox" id="stge--isEnabled" ${settings.isEnabled ? 'checked' : ''}>
+                        Enable group expressions
+                    </label>
+                </div>
+                <div class="flex-container">
+                    <label>
+                        Number of characters on the left (-1 = unlimited)
+                        <input type="number" class="text_pole" min="0" id="stge--numLeft" value="${settings.numLeft}">
+                    </label>
+                </div>
+                <div class="flex-container">
+                    <label>
+                        Number of characters on the right (-1 = unlimited)
+                        <input type="number" class="text_pole" min="0" id="stge--numRight" value="${settings.numRight}">
+                    </label>
+                </div>
+                <div class="flex-container">
+                    <label>
+                        Scale of current speaker (percentage; 100 = no change; <100 = shrink; >100 = grow)
+                        <input type="number" class="text_pole" min="0" id="stge--scaleSpeaker" value="${settings.scaleSpeaker}">
+                    </label>
+                </div>
+                <div class="flex-container">
+                    <label>
+                        Offset of characters to the side (percentage; 0 = all stacked in center; <100 = overlapping; >100 = no overlap)
+                        <input type="number" class="text_pole" min="0" id="stge--offset" value="${settings.offset}">
+                    </label>
+                </div>
+                <div class="flex-container">
+                    <label>
+                        Animation duration (milliseconds)
+                        <input type="number" class="text_pole" min="0" id="stge--transition" value="${settings.transition}">
+                    </label>
+                </div>
+                <div class="flex-container">
+                    <label>
+                        Default expression to be used
+                        <select class="text_pole" id="stge--expression"></select>
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+`;
+    $('#extensions_settings').append(html);
+    document.querySelector('#stge--isEnabled').addEventListener('click', ()=>{
+        settings.isEnabled = document.querySelector('#stge--isEnabled').checked;
+        saveSettingsDebounced();
+        restart();
+    });
+    document.querySelector('#stge--numLeft').addEventListener('change', ()=>{
+        settings.numLeft = Number(document.querySelector('#stge--numLeft').value);
+        saveSettingsDebounced();
+        restart();
+    });
+    document.querySelector('#stge--numRight').addEventListener('change', ()=>{
+        settings.numRight = Number(document.querySelector('#stge--numRight').value);
+        saveSettingsDebounced();
+        restart();
+    });
+    document.querySelector('#stge--scaleSpeaker').addEventListener('change', ()=>{
+        settings.scaleSpeaker = Number(document.querySelector('#stge--scaleSpeaker').value);
+        saveSettingsDebounced();
+        restart();
+    });
+    document.querySelector('#stge--offset').addEventListener('change', ()=>{
+        settings.offset = Number(document.querySelector('#stge--offset').value);
+        saveSettingsDebounced();
+        restart();
+    });
+    document.querySelector('#stge--transition').addEventListener('change', ()=>{
+        settings.transition = Number(document.querySelector('#stge--transition').value);
+        saveSettingsDebounced();
+        restart();
+    });
+    const sel = document.querySelector('#stge--expression');
+    const exp = [
+        'admiration',
+        'amusement',
+        'anger',
+        'annoyance',
+        'approval',
+        'caring',
+        'confusion',
+        'curiosity',
+        'desire',
+        'disappointment',
+        'disapproval',
+        'disgust',
+        'embarrassment',
+        'excitement',
+        'fear',
+        'gratitude',
+        'grief',
+        'joy',
+        'love',
+        'nervousness',
+        'neutral',
+        'optimism',
+        'pride',
+        'realization',
+        'relief',
+        'remorse',
+        'sadness',
+        'surprise',
+    ];
+    exp.forEach(e=>{
+        const opt = document.createElement('option'); {
+            opt.value = e;
+            opt.textContent = e;
+            opt.selected = (settings.expression ?? 'joy') == e;
+            sel.append(opt);
+        }
+    });
+    sel.addEventListener('change', ()=>{
+        settings.expression = sel.value;
+        saveSettingsDebounced();
+        restart();
+    });
+};
+
+const chatChanged = async ()=>{
     const context = getContext();
     if (context.groupId) {
-        end();
-        start();
+        await restart();
     } else {
         end();
     }
@@ -59,9 +204,10 @@ const groupUpdated = (...args) => {
 eventSource.on(event_types.GROUP_UPDATED, (...args)=>groupUpdated(...args));
 
 const messageRendered = async () => {
-    while (groupId) {
+    while (settings.isEnabled && groupId) {
         if (!busy) {
             await updateMembers();
+            //await delay(500); continue;
             const lastMes = chat.toReversed().find(it=>!it.is_system);
             const lastCharMes = chat.toReversed().find(it=>!it.is_user && !it.is_system && nameList.find(o=>it.name == o));
             if (lastCharMes) {
@@ -71,9 +217,24 @@ const messageRendered = async () => {
                     } else if (right.indexOf(lastCharMes.name) > -1) {
                         right.splice(right.indexOf(lastCharMes.name), 1);
                     }
-                    if (left.length <= right.length || right.length >= 2) {
+                    if ((left.length >= settings.numLeft && settings.numLeft != -1) && (right.length >= settings.numRight && settings.numRight != -1)) {
+                        const isLeft = Math.random() < 0.5;
+                        let exit;
+                        if (isLeft) {
+                            exit = left.pop();
+                        } else {
+                            exit = right.pop();
+                        }
+                        if (exit) {
+                            const img = imgs.find(it=>it.getAttribute('data-character') == exit);
+                            img.classList.add('stge--exit');
+                            await delay(settings.transition + 150);
+                            img.remove();
+                        }
+                    }
+                    if ((left.length < settings.numLeft || settings.numLeft == -1) && (left.length <= right.length || (right.length >= settings.numRight && settings.numRight != -1))) {
                         left.unshift(current);
-                    } else {
+                    } else if (right.length < (settings.numRight || settings.numRight == -1)) {
                         right.unshift(current);
                     }
                 }
@@ -81,26 +242,45 @@ const messageRendered = async () => {
             }
             const img = imgs.find(it=>it.getAttribute('data-character') == lastCharMes?.name);
             imgs
-                .filter(it=>(it != img || lastMes != lastCharMes) && it.closest('.stge--wrapper').classList.contains('stge--last'))
-                .forEach(it=>it.closest('.stge--wrapper').classList.remove('stge--last'))
+                .filter(it=>(it != img || lastMes != lastCharMes) && it.classList.contains('stge--last'))
+                .forEach(it=>it.classList.remove('stge--last'))
             ;
             if (lastMes == lastCharMes) {
-                img?.closest('.stge--wrapper')?.classList?.add('stge--last');
+                img?.classList?.add('stge--last');
             }
-            imgs.find(it=>it.getAttribute('data-character') == current)?.closest('.stge--wrapper').style.setProperty('--order', 0);
-            imgs.find(it=>it.getAttribute('data-character') == current)?.closest('.stge--wrapper').style.setProperty('--dir', 0);
-            left.forEach((name,idx)=>{
-                const wrap = imgs.find(it=>it.getAttribute('data-character') == name)?.closest('.stge--wrapper');
+            const ci = imgs.find(it=>it.getAttribute('data-character') == current);
+            ci?.style.setProperty('--order', '0');
+            ci?.style.setProperty('--dir', '1');
+            if (!ci.closest('.stge--root')) {
+                ci.classList.add('stge--exit');
+                root.append(ci);
+                await delay(50);
+                ci.classList.remove('stge--exit');
+            }
+            left.forEach(async(name,idx)=>{
+                const wrap = imgs.find(it=>it.getAttribute('data-character') == name);
                 wrap?.style?.setProperty('--order', String(idx + 1));
                 wrap?.style?.setProperty('--dir', '-1');
+                if (!wrap.closest('.stge--root')) {
+                    wrap.classList.add('stge--exit');
+                    root.append(wrap);
+                    await delay(50);
+                    wrap.classList.remove('stge--exit');
+                }
             });
-            right.forEach((name,idx)=>{
-                const wrap = imgs.find(it=>it.getAttribute('data-character') == name)?.closest('.stge--wrapper');
+            right.forEach(async(name,idx)=>{
+                const wrap = imgs.find(it=>it.getAttribute('data-character') == name);
                 wrap?.style?.setProperty('--order', String(idx + 1));
                 wrap?.style?.setProperty('--dir', '1');
+                if (!wrap.closest('.stge--root')) {
+                    wrap.classList.add('stge--exit');
+                    root.append(wrap);
+                    await delay(50);
+                    wrap.classList.remove('stge--exit');
+                }
             });
         }
-        await delay(500);
+        await delay(Math.max(settings.transition + 100, 500));
     }
 };
 // eventSource.on(event_types.USER_MESSAGE_RENDERED, ()=>messageRendered());
@@ -110,6 +290,7 @@ const messageRendered = async () => {
 
 
 const updateMembers = async()=>{
+    if (busy) return;
     busy = true;
     const context = getContext();
     const group = context.groups.find(it=>it.id == groupId);
@@ -133,41 +314,43 @@ const updateMembers = async()=>{
                 current = null;
             }
         }
-        img.closest('.stge--wrapper').classList.add('stge--exit');
-        await delay(550);
-        img.closest('.stge--wrapper').remove();
+        img.classList.add('stge--exit');
+        await delay(settings.transition + 150);
+        img.remove();
     }
     for (const name of added) {
-        let dir = 0;
+        let dir = 1;
         let order = 0;
         nameList.push(name);
         if (!current) {
             current = name;
-        } else if (left.length <= right.length || right.length >= 2) {
+        } else if ((left.length < settings.numLeft || settings.numLeft == -1) && (left.length <= right.length || right.length >= 2)) {
             left.push(name);
             dir = -1;
             order = left.length;
-        } else {
+        } else if (right.length < settings.numRight || settings.numRight == -1) {
             right.push(name);
             dir = 1;
             order = right.length;
         }
         const wrap = document.createElement('div'); {
+            imgs.push(wrap);
             wrap.classList.add('stge--wrapper');
-            wrap.classList.add('stge--exit');
-            wrap.style.setProperty('--dir', dir);
-            wrap.style.setProperty('--order', order);
+            wrap.setAttribute('data-character', name);
+            // wrap.classList.add('stge--exit');
+            // if (dir != 0) {
+            // }
+            // wrap.style.setProperty('--dir', dir);
+            // wrap.style.setProperty('--order', order);
             const img = document.createElement('img'); {
-                imgs.push(img);
                 img.classList.add('stge--img');
-                img.setAttribute('data-character', name);
-                img.src = `/characters/${name}/neutral.png`;
+                img.src = `/characters/${name}/${settings.expression}.png`;
                 wrap.append(img);
             }
-            root.append(wrap);
+            // root.append(wrap);
         }
-        await delay(50);
-        wrap.classList.remove('stge--exit');
+        // await delay(50);
+        // wrap.classList.remove('stge--exit');
     }
     busy = false;
 };
@@ -190,50 +373,33 @@ const getOrder = (members)=>{
     }
     return o;
 };
-const start = ()=>{
+const restart = async()=>{
+    end();
+    await delay(500);
+    await start();
+};
+const start = async()=>{
+    if (!settings.isEnabled) return;
+    document.querySelector('#expression-wrapper').style.opacity = '0';
     root = document.createElement('div'); {
         root.classList.add('stge--root');
+        root.style.setProperty('--scale-speaker', settings.scaleSpeaker);
+        root.style.setProperty('--offset', settings.offset);
+        root.style.setProperty('--transition', settings.transition);
         document.body.append(root);
     }
     const context = getContext();
     groupId = context.groupId;
     chatId = context.chatid;
-    const group = context.groups.find(it=>it.id == groupId);
-    const members = group.members.map(m=>context.characters.find(c=>c.avatar == m)).filter(it=>it);
-    const names = getOrder(members.map(it=>it.name));
-    names.push(...members.filter(m=>!names.find(it=>it == m.name)).map(it=>it.name));
-    names.forEach((name,idx)=>{
-        const m = members.find(it=>it.name == name);
-        nameList.push(m.name);
-        if (idx == 0) {
-            current = m.name;
-        } else {
-            if (left.length <= right.length || right.length >= 2) {
-                left.push(m.name);
-            } else {
-                right.push(m.name);
-            }
-        }
-        const wrap = document.createElement('div'); {
-            wrap.classList.add('stge--wrapper');
-            const img = document.createElement('img'); {
-                imgs.push(img);
-                img.classList.add('stge--img');
-                img.setAttribute('data-character', m.name);
-                img.src = `/characters/${m.name}/neutral.png`;
-                wrap.append(img);
-            }
-            root.append(wrap);
-        }
-    });
-    document.querySelector('#expression-wrapper').style.opacity = '0';
-    mo.observe(document.querySelector('#expression-wrapper'), { childList:true, subtree:true, attributes:true });
     messageRendered();
+    mo.observe(document.querySelector('#expression-wrapper'), { childList:true, subtree:true, attributes:true });
+    document.querySelector('#expression-wrapper').style.opacity = '0';
 };
 const end = ()=>{
     mo.disconnect();
     groupId = null;
     chatId = null;
+    current = null;
     nameList = [];
     left = [];
     right = [];

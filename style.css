@@ -1,0 +1,65 @@
+.stge--root {
+  position: absolute;
+  top: 20%;
+  bottom: 0;
+  right: 0;
+  width: calc((100vw - var(--sheldWidth)) / 2);
+  perspective: 500px;
+  transform-style: preserve-3d;
+}
+.stge--root > .stge--wrapper {
+  --order: 0;
+  --dir: 0;
+  position: absolute;
+  top: 0;
+  left: calc(25% * var(--dir) * var(--order));
+  width: 100%;
+  bottom: 0;
+  transform: translate3d(0, 0, calc(-1px * var(--order)));
+  transform-origin: bottom center;
+  transition: 400ms, transform 1ms;
+}
+.stge--root > .stge--wrapper.stge--exit {
+  left: calc(100vw * var(--dir));
+}
+.stge--root > .stge--wrapper.stge--last {
+  scale: 1.2;
+}
+.stge--root > .stge--wrapper > .stge--img {
+  height: 100%;
+  object-fit: contain;
+  aspect-ratio: 1/1.5;
+  object-position: bottom center;
+  margin-left: 50%;
+  transform: translateX(-50%);
+}
+.stge--root--bak-BACKUP {
+  position: absolute;
+  top: 20%;
+  bottom: 0;
+  right: 0;
+  width: calc((100vw - var(--sheldWidth)) / 2);
+  display: flex;
+  flex-direction: row;
+  perspective: 500px;
+  transform-style: preserve-3d;
+}
+.stge--root--bak-BACKUP > .stge--wrapper {
+  --order: 0;
+  flex: 1 1 0;
+  width: 0;
+  transform: translate3d(0, 0, calc(1px * var(--order)));
+  transform-origin: bottom center;
+  transition: 400ms;
+}
+.stge--root--bak-BACKUP > .stge--wrapper.stge--last {
+  scale: 1.2;
+}
+.stge--root--bak-BACKUP > .stge--wrapper > .stge--img {
+  height: 100%;
+  object-fit: contain;
+  aspect-ratio: 1/1.5;
+  object-position: bottom center;
+  margin-left: 50%;
+  transform: translateX(-50%);
+}

@@ -1,6 +1,7 @@
 import { chat, eventSource, event_types, saveSettingsDebounced } from '../../../../script.js';
 import { extension_settings, getContext } from '../../../extensions.js';
-import { delay } from '../../../utils.js';
+import { debounce, delay } from '../../../utils.js';
+import { debounceAsync } from '../../quick-reply/index.js';
 
 const log = (...msg) => console.log('[GE]', ...msg);
 
@@ -60,6 +61,7 @@ const initSettings = () => {
         offset: 25,
         transition: 400,
         expression: 'joy',
+        scaleDropoff: 3,
     }, extension_settings.groupExpressions ?? {});
     extension_settings.groupExpressions = settings;
 
@@ -103,6 +105,12 @@ const initSettings = () => {
                 </div>
                 <div class="flex-container">
                     <label>
+                        Scale dropoff (percentage; 0 = no change; >0 = chars to the side get smaller; >0 = chars to the side get larger)
+                        <input type="number" class="text_pole" min="0" id="stge--scaleDropoff" value="${settings.scaleDropoff}">
+                    </label>
+                </div>
+                <div class="flex-container">
+                    <label>
                         Animation duration (milliseconds)
                         <input type="number" class="text_pole" min="0" id="stge--transition" value="${settings.transition}">
                     </label>
@@ -140,6 +148,11 @@ const initSettings = () => {
     });
     document.querySelector('#stge--offset').addEventListener('change', ()=>{
         settings.offset = Number(document.querySelector('#stge--offset').value);
+        saveSettingsDebounced();
+        restart();
+    });
+    document.querySelector('#stge--scaleDropoff').addEventListener('change', ()=>{
+        settings.scaleDropoff = Number(document.querySelector('#stge--scaleDropoff').value);
         saveSettingsDebounced();
         restart();
     });
@@ -238,10 +251,12 @@ const messageRendered = async () => {
                             img.remove();
                         }
                     }
-                    if ((left.length < settings.numLeft || settings.numLeft == -1) && (left.length <= right.length || (right.length >= settings.numRight && settings.numRight != -1))) {
-                        left.unshift(current);
-                    } else if (right.length < (settings.numRight || settings.numRight == -1)) {
-                        right.unshift(current);
+                    if (current) {
+                        if ((left.length < settings.numLeft || settings.numLeft == -1) && (left.length <= right.length || (right.length >= settings.numRight && settings.numRight != -1))) {
+                            left.unshift(current);
+                        } else if (right.length < (settings.numRight || settings.numRight == -1)) {
+                            right.unshift(current);
+                        }
                     }
                 }
                 current = lastCharMes.name;
@@ -330,7 +345,7 @@ const updateMembers = async()=>{
         nameList.push(name);
         if (!current) {
             current = name;
-        } else if ((left.length < settings.numLeft || settings.numLeft == -1) && (left.length <= right.length || right.length >= 2)) {
+        } else if ((left.length < settings.numLeft || settings.numLeft == -1) && (left.length <= right.length || right.length >= settings.numRight)) {
             left.push(name);
             dir = -1;
             order = left.length;
@@ -379,11 +394,11 @@ const getOrder = (members)=>{
     }
     return o;
 };
-const restart = async()=>{
+const restart = debounceAsync(async()=>{
     end();
     await delay(500);
     await start();
-};
+});
 const start = async()=>{
     if (!settings.isEnabled) return;
     document.querySelector('#expression-wrapper').style.opacity = '0';
@@ -392,6 +407,7 @@ const start = async()=>{
         root.style.setProperty('--scale-speaker', settings.scaleSpeaker);
         root.style.setProperty('--offset', settings.offset);
         root.style.setProperty('--transition', settings.transition);
+        root.style.setProperty('--scale-dropoff', settings.scaleDropoff);
         document.body.append(root);
     }
     const context = getContext();

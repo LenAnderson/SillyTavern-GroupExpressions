@@ -1,4 +1,4 @@
-import { chat, eventSource, event_types, saveSettingsDebounced } from '../../../../script.js';
+import { chat, eventSource, event_types, getRequestHeaders, saveSettingsDebounced } from '../../../../script.js';
 import { extension_settings, getContext } from '../../../extensions.js';
 import { delay } from '../../../utils.js';
 
@@ -97,6 +97,7 @@ const initSettings = () => {
         expression: 'joy',
         scaleDropoff: 3,
         transparentMenu: false,
+        extensions: ['png'],
     }, extension_settings.groupExpressions ?? {});
     extension_settings.groupExpressions = settings;
 
@@ -158,6 +159,12 @@ const initSettings = () => {
                 </div>
                 <div class="flex-container">
                     <label>
+                        File extensions (comma-separated list, e.g. <code>png,gif,webp</code>)
+                        <input type="text" class="text_pole" id="stge--extensions" value="${settings.extensions.join(',')}">
+                    </label>
+                </div>
+                <div class="flex-container">
+                    <label>
                         Default expression to be used
                         <select class="text_pole" id="stge--expression"></select>
                     </label>
@@ -213,6 +220,11 @@ const initSettings = () => {
         saveSettingsDebounced();
         root.style.setProperty('--transition', String(settings.transition));
         // restart();
+    });
+    document.querySelector('#stge--extensions').addEventListener('input', ()=>{
+        settings.extensions = document.querySelector('#stge--extensions').value?.split(/,\s*/);
+        saveSettingsDebounced();
+        restart();
     });
     const sel = document.querySelector('#stge--expression');
     const exp = [
@@ -366,6 +378,18 @@ const messageRendered = async () => {
 
 
 
+const findImage = async(name) => {
+    for (const ext of settings.extensions) {
+        const url = `/characters/${name}/${settings.expression}.${ext}`;
+        const resp = await fetch(url, {
+            method: 'HEAD',
+            headers: getRequestHeaders(),
+        });
+        if (resp.ok) {
+            return url;
+        }
+    }
+};
 const updateMembers = async()=>{
     if (busy) return;
     busy = true;
@@ -417,7 +441,7 @@ const updateMembers = async()=>{
             wrap.setAttribute('data-character', name);
             const img = document.createElement('img'); {
                 img.classList.add('stge--img');
-                img.src = `/characters/${name}/${settings.expression}.png`;
+                img.src = await findImage(name);
                 wrap.append(img);
             }
         }

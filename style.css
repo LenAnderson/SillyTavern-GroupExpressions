@@ -12,7 +12,7 @@
   top: calc(var(--top) * 1%);
   bottom: 0;
   left: calc(var(--position) * (100vw - var(--width)) / 100);
-  left: clamp(0vw, calc(var(--position) * (100vw - var(--width)) / 100 - var(--settings-panel-width)), calc(100vw - var(--width)));
+  left: clamp(0vw, calc(var(--position) * (100vw - var(--width)) / 100 - var(--settings-panel-width, 0px)), calc(100vw - var(--width)));
   width: var(--width);
   perspective: 500px;
   transform-style: preserve-3d;

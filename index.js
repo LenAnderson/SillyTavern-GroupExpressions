@@ -98,6 +98,7 @@ const initSettings = () => {
         scaleDropoff: 3,
         transparentMenu: false,
         extensions: ['png'],
+        position: 0,
     }, extension_settings.groupExpressions ?? {});
     extension_settings.groupExpressions = settings;
 
@@ -119,6 +120,18 @@ const initSettings = () => {
                     <label class="checkbox_label">
                         <input type="checkbox" id="stge--transparentMenu" ${settings.transparentMenu ? 'checked' : ''}>
                         Transparent settings menu
+                    </label>
+                </div>
+                <div class="flex-container">
+                    <label>
+                        Position of expression images
+                        <div class="stge--positionContainer">
+                            Left
+                            <input type="range" class="text_pole" min="0" max="100" id="stge--positionRange" value="${settings.position}">
+                            Right
+                            <input type="number" class="text_pole" min="0" max="100" id="stge--position" value="${settings.position}">
+                            %
+                        </div>
                     </label>
                 </div>
                 <div class="flex-container">
@@ -185,7 +198,18 @@ const initSettings = () => {
     document.querySelector('#stge--transparentMenu').addEventListener('click', ()=>{
         settings.transparentMenu = document.querySelector('#stge--transparentMenu').checked;
         saveSettingsDebounced();
-        // updateSettingsBackground();
+    });
+    document.querySelector('#stge--positionRange').addEventListener('input', ()=>{
+        settings.position = document.querySelector('#stge--positionRange').value;
+        document.querySelector('#stge--position').value = settings.position;
+        saveSettingsDebounced();
+        root.style.setProperty('--position', settings.position);
+    });
+    document.querySelector('#stge--position').addEventListener('input', ()=>{
+        settings.position = document.querySelector('#stge--position').value;
+        document.querySelector('#stge--positionRange').value = settings.position;
+        saveSettingsDebounced();
+        root.style.setProperty('--position', settings.position);
     });
     document.querySelector('#stge--numLeft').addEventListener('input', ()=>{
         settings.numLeft = Number(document.querySelector('#stge--numLeft').value);
@@ -514,6 +538,7 @@ const start = async()=>{
         root.style.setProperty('--offset', settings.offset);
         root.style.setProperty('--transition', settings.transition);
         root.style.setProperty('--scale-dropoff', settings.scaleDropoff);
+        root.style.setProperty('--position', settings.position);
         document.body.append(root);
     }
     const context = getContext();

@@ -4,13 +4,16 @@
 	--offset: 25;
 	--transition: 400;
 	--scale-dropoff: 3;
+	--position: 0;
+	--width: calc((100vw - var(--sheldWidth)) / 2);
 }
 .stge--root {
 	position: absolute;
 	top: calc(var(--top) * 1%);
 	bottom: 0;
-	right: var(--settings-panel-width);
-	width: calc((100vw - var(--sheldWidth)) / 2);
+	left: calc(var(--position) * (100vw - var(--width)) / 100);
+	left: clamp(0vw, calc(var(--position) * (100vw - var(--width)) / 100 - var(--settings-panel-width)), calc(100vw - var(--width)));
+	width: var(--width);
 	perspective: 500px;
 	transform-style: preserve-3d;
 	transition: calc(var(--transition) * 1ms);
@@ -47,34 +50,9 @@
 
 
 
-.stge--root--bak-BACKUP {
-	position: absolute;
-	top: 20%;
-	bottom: 0;
-	right: 0;
-	width: calc((100vw - var(--sheldWidth)) / 2);
+.stge--positionContainer {
 	display: flex;
 	flex-direction: row;
-	perspective: 500px;
-	transform-style: preserve-3d;
-
-	> .stge--wrapper {
-		--order: 0;
-		flex: 1 1 0;
-		width: 0;
-		transform: translate3d(0, 0, calc(1px * var(--order)));
-		transform-origin: bottom center;
-		transition: 400ms;
-		&.stge--last {
-			scale: 1.2;
-		}
-		> .stge--img {
-			height: 100%;
-			object-fit: contain;
-			aspect-ratio: 1/1.5;
-			object-position: bottom center;
-			margin-left: 50%;
-			transform: translateX(-50%);
-		}
-	}
+	gap: 1em;
+	align-items: center;
 }

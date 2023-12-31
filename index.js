@@ -1,5 +1,5 @@
-import { chat, eventSource, event_types, getRequestHeaders, saveSettingsDebounced } from '../../../../script.js';
-import { extension_settings, getContext } from '../../../extensions.js';
+import { chat, chat_metadata, eventSource, event_types, getRequestHeaders, saveChatConditional, saveChatDebounced, saveSettingsDebounced } from '../../../../script.js';
+import { extension_settings, getContext, saveMetadataDebounced } from '../../../extensions.js';
 import { delay } from '../../../utils.js';
 
 const log = (...msg) => console.log('[GE]', ...msg);
@@ -35,6 +35,8 @@ export function debounceAsync(func, timeout = 300) {
 
 /**@type {Object} */
 let settings;
+/**@type {Object} */
+let csettings;
 /**@type {String} */
 let groupId;
 /**@type {String} */
@@ -136,43 +138,49 @@ const initSettings = () => {
                 </div>
                 <div class="flex-container">
                     <label>
-                        Number of characters on the left (-1 = unlimited)
+                        Number of characters on the left <small>(-1 = unlimited)</small>
                         <input type="number" class="text_pole" min="-1" id="stge--numLeft" value="${settings.numLeft}">
                     </label>
                 </div>
                 <div class="flex-container">
                     <label>
-                        Number of characters on the right (-1 = unlimited)
+                        Number of characters on the right <small>(-1 = unlimited)</small>
                         <input type="number" class="text_pole" min="-1" id="stge--numRight" value="${settings.numRight}">
                     </label>
                 </div>
                 <div class="flex-container">
                     <label>
-                        Scale of current speaker (percentage; 100 = no change; <100 = shrink; >100 = grow)
+                        Characters to exclude <small>(comma separated list of names, <strong>saved in chat</strong>)</small>
+                        <input type="text" class="text_pole" id="stge--exclude" placeholder="Alice, Bob, Carol" value="" disabled>
+                    </label>
+                </div>
+                <div class="flex-container">
+                    <label>
+                        Scale of current speaker <small>(percentage; 100 = no change; <100 = shrink; >100 = grow)</small>
                         <input type="number" class="text_pole" min="0" id="stge--scaleSpeaker" value="${settings.scaleSpeaker}">
                     </label>
                 </div>
                 <div class="flex-container">
                     <label>
-                        Offset of characters to the side (percentage; 0 = all stacked in center; <100 = overlapping; >100 = no overlap)
+                        Offset of characters to the side <small>(percentage; 0 = all stacked in center; <100 = overlapping; >100 = no overlap)</small>
                         <input type="number" class="text_pole" min="0" id="stge--offset" value="${settings.offset}">
                     </label>
                 </div>
                 <div class="flex-container">
                     <label>
-                        Scale dropoff (percentage; 0 = no change; >0 = chars to the side get smaller; >0 = chars to the side get larger)
+                        Scale dropoff <small>(percentage; 0 = no change; >0 = chars to the side get smaller; >0 = chars to the side get larger)</small>
                         <input type="number" class="text_pole" id="stge--scaleDropoff" value="${settings.scaleDropoff}">
                     </label>
                 </div>
                 <div class="flex-container">
                     <label>
-                        Animation duration (milliseconds)
+                        Animation duration <small>(milliseconds)</small>
                         <input type="number" class="text_pole" min="0" id="stge--transition" value="${settings.transition}">
                     </label>
                 </div>
                 <div class="flex-container">
                     <label>
-                        File extensions (comma-separated list, e.g. <code>png,gif,webp</code>)
+                        File extensions <small>(comma-separated list, e.g. <code>png,gif,webp</code>)</small>
                         <input type="text" class="text_pole" id="stge--extensions" value="${settings.extensions.join(',')}">
                     </label>
                 </div>
@@ -214,36 +222,35 @@ const initSettings = () => {
     document.querySelector('#stge--numLeft').addEventListener('input', ()=>{
         settings.numLeft = Number(document.querySelector('#stge--numLeft').value);
         saveSettingsDebounced();
-        // restart();
     });
     document.querySelector('#stge--numRight').addEventListener('input', ()=>{
         settings.numRight = Number(document.querySelector('#stge--numRight').value);
         saveSettingsDebounced();
-        // restart();
+    });
+    document.querySelector('#stge--exclude').addEventListener('input', ()=>{
+        csettings.exclude = document.querySelector('#stge--exclude').value.toLowerCase().split(/\s*,\s*/);
+        chat_metadata.groupExpressions = csettings;
+        saveMetadataDebounced();
     });
     document.querySelector('#stge--scaleSpeaker').addEventListener('input', ()=>{
         settings.scaleSpeaker = Number(document.querySelector('#stge--scaleSpeaker').value);
         saveSettingsDebounced();
         root.style.setProperty('--scale-speaker', String(settings.scaleSpeaker));
-        // restart();
     });
     document.querySelector('#stge--offset').addEventListener('input', ()=>{
         settings.offset = Number(document.querySelector('#stge--offset').value);
         saveSettingsDebounced();
         root.style.setProperty('--offset', String(settings.offset));
-        // restart();
     });
     document.querySelector('#stge--scaleDropoff').addEventListener('input', ()=>{
         settings.scaleDropoff = Number(document.querySelector('#stge--scaleDropoff').value);
         saveSettingsDebounced();
         root.style.setProperty('--scale-dropoff', String(settings.scaleDropoff));
-        // restart();
     });
     document.querySelector('#stge--transition').addEventListener('input', ()=>{
         settings.transition = Number(document.querySelector('#stge--transition').value);
         saveSettingsDebounced();
         root.style.setProperty('--transition', String(settings.transition));
-        // restart();
     });
     document.querySelector('#stge--extensions').addEventListener('input', ()=>{
         settings.extensions = document.querySelector('#stge--extensions').value?.split(/,\s*/);
@@ -292,13 +299,21 @@ const initSettings = () => {
     sel.addEventListener('change', ()=>{
         settings.expression = sel.value;
         saveSettingsDebounced();
-        // restart();
     });
 };
 
 const chatChanged = async ()=>{
     log('chatChanged');
     const context = getContext();
+
+    csettings = Object.assign({
+        exclude: [],
+    }, chat_metadata.groupExpressions ?? {});
+    chat_metadata.groupExpressions = csettings;
+    log(chat_metadata);
+    document.querySelector('#stge--exclude').disabled = context.groupId == null;
+    document.querySelector('#stge--exclude').value = csettings.exclude?.join(', ') ?? '';
+
     if (context.groupId) {
         await restart();
     } else {
@@ -420,8 +435,8 @@ const updateMembers = async()=>{
     const context = getContext();
     const group = context.groups.find(it=>it.id == groupId);
     const members = group.members.map(m=>context.characters.find(c=>c.avatar == m)).filter(it=>it);
-    const names = getOrder(members.map(it=>it.name));
-    names.push(...members.filter(m=>!names.find(it=>it == m.name)).map(it=>it.name));
+    const names = getOrder(members.map(it=>it.name)).filter(it=>csettings.exclude?.indexOf(it.toLowerCase()) == -1);
+    names.push(...members.filter(m=>!names.find(it=>it == m.name)).map(it=>it.name).filter(it=>csettings.exclude?.indexOf(it.toLowerCase()) == -1));
     const removed = nameList.filter(it=>names.indexOf(it) == -1);
     const added = names.filter(it=>nameList.indexOf(it) == -1);
     for (const name of removed) {

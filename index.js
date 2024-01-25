@@ -379,7 +379,7 @@ const messageRendered = async () => {
             const ci = imgs.find(it=>it.getAttribute('data-character') == current);
             ci?.style.setProperty('--order', '0');
             ci?.style.setProperty('--dir', '1');
-            if (!ci.closest('.stge--root')) {
+            if (ci && !ci.closest('.stge--root')) {
                 ci.classList.add('stge--exit');
                 root.append(ci);
                 await delay(50);
